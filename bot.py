@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import asyncio
 import tempfile
 from telegram import Update
 from telegram.ext import (
@@ -228,7 +229,13 @@ def main():
     if render_url:
         # Webhook mode for Render
         port = int(os.environ.get("PORT", 10000))
-        webhook_url = f"https://{render_url}/webhook"
+
+        # RENDER_EXTERNAL_URL may or may not include https://
+        if render_url.startswith("https://") or render_url.startswith("http://"):
+            webhook_url = f"{render_url}/webhook"
+        else:
+            webhook_url = f"https://{render_url}/webhook"
+
         logger.info(f"Starting webhook on port {port}, URL: {webhook_url}")
 
         app.run_webhook(
@@ -244,4 +251,9 @@ def main():
 
 
 if __name__ == "__main__":
+    # Ensure event loop exists (needed for Python 3.14+)
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
     main()
