@@ -6,42 +6,60 @@ from datetime import datetime
 def parse_zepto_invoice(pdf_path: str) -> dict:
     """
     Parse a Zepto invoice PDF and extract order items.
+    Handles multi-page invoices where items spill onto page 2+.
     Returns dict with order_date, order_no, items list, and total.
     """
     with pdfplumber.open(pdf_path) as pdf:
-        page = pdf.pages[0]
-        tables = page.extract_tables()
+        all_tables = []
+        for page in pdf.pages:
+            all_tables.extend(page.extract_tables())
 
-    # Table 0 = header info (invoice no, date, address)
-    # Table 1 = item table
-    if len(tables) < 2:
+    if len(all_tables) < 2:
         raise ValueError("Could not find item table in invoice PDF")
 
-    item_table = tables[1]
-
-    # First row is headers, skip it
-    # Last row is totals (SR No is empty), skip it
+    # Extract items from all tables across all pages
     items = []
-    for row in item_table[1:]:  # skip header
-        sr_no = (row[0] or "").strip()
-        if not sr_no or not sr_no.isdigit():
-            continue  # skip totals row or malformed rows
+    for table in all_tables:
+        for row in table:
+            # Find the SR No — could be at index 0 or 1 depending on page layout
+            sr_no = None
+            sr_idx = None
+            for idx in range(min(3, len(row))):
+                cell = (row[idx] or "").strip()
+                if cell.isdigit():
+                    sr_no = cell
+                    sr_idx = idx
+                    break
 
-        # Clean up item name (remove newlines from PDF wrapping)
-        item_name = (row[1] or "").replace("\n", " ").strip()
-        # Clean up multi-spaces
-        item_name = re.sub(r"\s+", " ", item_name)
+            if sr_no is None:
+                continue
 
-        total_amt = float(row[-1])  # last column is Total Amt.
+            # Item name is the next column after SR No
+            name_idx = sr_idx + 1
+            if name_idx >= len(row):
+                continue
 
-        items.append({
-            "sr": int(sr_no),
-            "name": item_name,
-            "amount": total_amt,
-        })
+            item_name = (row[name_idx] or "").replace("\n", " ").strip()
+            item_name = re.sub(r"\s+", " ", item_name)
+
+            if not item_name:
+                continue
+
+            try:
+                total_amt = float(row[-1])
+            except (ValueError, TypeError):
+                continue
+
+            # Avoid duplicate SR numbers
+            if not any(i["sr"] == int(sr_no) for i in items):
+                items.append({
+                    "sr": int(sr_no),
+                    "name": item_name,
+                    "amount": total_amt,
+                })
 
     # Extract date and order number from header table
-    header_text = tables[0][0][0] if tables[0] else ""
+    header_text = all_tables[0][0][0] if all_tables[0] else ""
     order_date = ""
     order_no = ""
 
