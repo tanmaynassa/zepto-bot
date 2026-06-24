@@ -35,7 +35,7 @@ class SheetsLogger:
 
     def _get_headers(self):
         """Get auth headers, refreshing token if needed."""
-        if self.creds.expired:
+        if not self.creds.valid:
             self.creds.refresh(Request())
         return {"Authorization": f"Bearer {self.creds.token}"}
 
