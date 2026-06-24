@@ -99,30 +99,36 @@ async def handle_tags(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "all shared":
         mine_indices = []
         kalash_indices = []
+        abhirag_indices = []
     else:
-        # Parse "mine: 1,2" and "kalash: 3,4" from the message
+        # Parse "mine: 1,2", "kalash: 3,4", "abhirag: 5" from the message
         mine_indices = []
         kalash_indices = []
+        abhirag_indices = []
 
         mine_match = re.search(r"mine\s*:\s*([\d,\s]+)", text)
         kalash_match = re.search(r"kalash\s*:\s*([\d,\s]+)", text)
+        abhirag_match = re.search(r"abhirag\s*:\s*([\d,\s]+)", text)
 
         if mine_match:
             mine_indices = [int(x.strip()) for x in mine_match.group(1).split(",") if x.strip().isdigit()]
         if kalash_match:
             kalash_indices = [int(x.strip()) for x in kalash_match.group(1).split(",") if x.strip().isdigit()]
+        if abhirag_match:
+            abhirag_indices = [int(x.strip()) for x in abhirag_match.group(1).split(",") if x.strip().isdigit()]
 
-        if not mine_match and not kalash_match:
+        if not mine_match and not kalash_match and not abhirag_match:
             await update.message.reply_text(
                 "Couldn't understand that. Reply like:\n"
-                "`mine: 1,2`\n`kalash: 3`\n\n"
+                "`mine: 1,2`\n`kalash: 3`\n`abhirag: 4`\n\n"
                 "Or `all shared` if everything splits equally.",
                 parse_mode="Markdown",
             )
             return AWAITING_TAGS
 
         # Validate indices
-        invalid = [x for x in mine_indices + kalash_indices if x not in valid_srs]
+        all_tagged = mine_indices + kalash_indices + abhirag_indices
+        invalid = [x for x in all_tagged if x not in valid_srs]
         if invalid:
             await update.message.reply_text(
                 f"Item numbers {invalid} don't exist in this order. "
@@ -131,15 +137,18 @@ async def handle_tags(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return AWAITING_TAGS
 
         # Check for overlap
-        overlap = set(mine_indices) & set(kalash_indices)
-        if overlap:
-            await update.message.reply_text(
-                f"Items {list(overlap)} are tagged as both yours and Kalash's. Fix and resend."
-            )
-            return AWAITING_TAGS
+        all_sets = [set(mine_indices), set(kalash_indices), set(abhirag_indices)]
+        for i, (a, b) in enumerate([(0,1), (0,2), (1,2)]):
+            overlap = all_sets[a] & all_sets[b]
+            if overlap:
+                names = ["yours", "Kalash's", "Abhirag's"]
+                await update.message.reply_text(
+                    f"Items {list(overlap)} are tagged as both {names[a]} and {names[b]}. Fix and resend."
+                )
+                return AWAITING_TAGS
 
     # Compute split
-    split = compute_split(parsed["items"], mine_indices, kalash_indices)
+    split = compute_split(parsed["items"], mine_indices, kalash_indices, abhirag_indices)
     context.user_data["split"] = split
 
     # Show summary and ask for confirmation
@@ -177,13 +186,19 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
             total_cost=split["order_total"],
             my_share=split["my_share"],
             kalash_share=split["kalash_share"],
+            abhirag_share=split.get("abhirag_share", 0),
             details=details,
         )
 
+        confirm_lines = [f"✅ *Done!* Logged to Splitwise.\n"]
+        if split["kalash_share"] > 0:
+            confirm_lines.append(f"Kalash owes you *₹{split['kalash_share']:.2f}*")
+        if split.get("abhirag_share", 0) > 0:
+            confirm_lines.append(f"Abhirag owes you *₹{split['abhirag_share']:.2f}*")
+        confirm_lines.append(f"\nThey'll get a notification from Splitwise.")
+
         await update.message.reply_text(
-            f"✅ *Done!* Logged to Splitwise.\n\n"
-            f"Kalash owes you *₹{split['kalash_share']:.2f}*\n"
-            f"Kalash will get a notification from Splitwise.",
+            "\n".join(confirm_lines),
             parse_mode="Markdown",
         )
 

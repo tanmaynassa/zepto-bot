@@ -74,27 +74,34 @@ def format_item_list(parsed: dict) -> str:
     lines.append("\n*Tag your items:*")
     lines.append("`mine: 1,2`")
     lines.append("`kalash: 3`")
-    lines.append("_(everything else splits 50/50)_")
+    lines.append("`abhirag: 4`")
+    lines.append("_(everything else splits 50/50 between you & Kalash)_")
     lines.append("\nOr type `all shared` if everything splits equally.")
 
     return "\n".join(lines)
 
 
-def compute_split(items: list, mine_indices: list, kalash_indices: list) -> dict:
+def compute_split(items: list, mine_indices: list, kalash_indices: list, abhirag_indices: list = None) -> dict:
     """
     Compute the expense split.
     - mine_indices: item SR numbers that are Tanmay's only
     - kalash_indices: item SR numbers that are Kalash's only
-    - everything else is shared 50/50
+    - abhirag_indices: item SR numbers that are Abhirag's only
+    - everything else is shared 50/50 between Tanmay and Kalash
     
-    Since Tanmay pays the full bill upfront, we compute how much Kalash owes.
+    Since Tanmay pays the full bill upfront, we compute how much each person owes.
     """
+    if abhirag_indices is None:
+        abhirag_indices = []
+
     my_total = 0.0
     kalash_total = 0.0
+    abhirag_total = 0.0
     shared_total = 0.0
 
     my_items = []
     kalash_items = []
+    abhirag_items = []
     shared_items = []
 
     for item in items:
@@ -104,26 +111,33 @@ def compute_split(items: list, mine_indices: list, kalash_indices: list) -> dict
         elif item["sr"] in kalash_indices:
             kalash_total += item["amount"]
             kalash_items.append(item)
+        elif item["sr"] in abhirag_indices:
+            abhirag_total += item["amount"]
+            abhirag_items.append(item)
         else:
             shared_total += item["amount"]
             shared_items.append(item)
 
-    shared_each = round(shared_total / 2, 2)
+    shared_each = round(shared_total / 2, 2)  # only between Tanmay & Kalash
 
     my_share = round(my_total + shared_each, 2)
     kalash_share = round(kalash_total + shared_each, 2)
-    order_total = round(my_total + kalash_total + shared_total, 2)
+    abhirag_share = round(abhirag_total, 2)  # only his personal items
+    order_total = round(my_total + kalash_total + abhirag_total + shared_total, 2)
 
     return {
         "my_items": my_items,
         "kalash_items": kalash_items,
+        "abhirag_items": abhirag_items,
         "shared_items": shared_items,
         "my_personal": my_total,
         "kalash_personal": kalash_total,
+        "abhirag_personal": abhirag_total,
         "shared_total": shared_total,
         "shared_each": shared_each,
         "my_share": my_share,
         "kalash_share": kalash_share,
+        "abhirag_share": abhirag_share,
         "order_total": order_total,
     }
 
@@ -142,13 +156,21 @@ def format_split_summary(split: dict, order_date: str) -> str:
         lines.append(f"🔸 *Kalash's items:* ₹{split['kalash_personal']:.2f}")
         lines.append(f"   _{names}_\n")
 
+    if split["abhirag_items"]:
+        names = ", ".join(i["name"] for i in split["abhirag_items"])
+        lines.append(f"🟣 *Abhirag's items:* ₹{split['abhirag_personal']:.2f}")
+        lines.append(f"   _{names}_\n")
+
     if split["shared_items"]:
         names = ", ".join(i["name"] for i in split["shared_items"])
-        lines.append(f"🔀 *Shared (50/50):* ₹{split['shared_total']:.2f} → ₹{split['shared_each']:.2f} each")
+        lines.append(f"🔀 *Shared (you & Kalash 50/50):* ₹{split['shared_total']:.2f} → ₹{split['shared_each']:.2f} each")
         lines.append(f"   _{names}_\n")
 
     lines.append(f"💰 *You paid:* ₹{split['order_total']:.2f}")
-    lines.append(f"📌 *Kalash owes you:* ₹{split['kalash_share']:.2f}")
+    if split["kalash_share"] > 0:
+        lines.append(f"📌 *Kalash owes you:* ₹{split['kalash_share']:.2f}")
+    if split["abhirag_share"] > 0:
+        lines.append(f"📌 *Abhirag owes you:* ₹{split['abhirag_share']:.2f}")
     lines.append(f"\nType `ok` to log to Splitwise or `cancel` to discard.")
 
     return "\n".join(lines)
