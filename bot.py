@@ -14,6 +14,7 @@ from telegram.ext import (
 )
 from invoice_parser import parse_zepto_invoice, format_item_list, compute_split, format_split_summary
 from splitwise_client import SplitwiseClient, build_expense_details
+from sheets_logger import SheetsLogger, log_order_to_sheets
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ AWAITING_TAGS, CONFIRMING = range(2)
 
 # Splitwise client (initialized once)
 sw = None
+sheets = None
 
 
 def get_splitwise() -> SplitwiseClient:
@@ -32,6 +34,20 @@ def get_splitwise() -> SplitwiseClient:
         sw.get_current_user()
         sw.find_kalash()
     return sw
+
+
+def get_sheets() -> SheetsLogger | None:
+    """Initialize Google Sheets logger. Returns None if not configured."""
+    global sheets
+    if sheets is None and os.environ.get("GOOGLE_SHEET_ID"):
+        try:
+            sheets = SheetsLogger()
+            sheets.ensure_headers()
+            logger.info("Google Sheets logger initialized")
+        except Exception as e:
+            logger.error(f"Failed to init Sheets logger: {e}")
+            return None
+    return sheets
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -196,6 +212,16 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if split.get("abhirag_share", 0) > 0:
             confirm_lines.append(f"Abhirag owes you *₹{split['abhirag_share']:.2f}*")
         confirm_lines.append(f"\nThey'll get a notification from Splitwise.")
+
+        # Log to Google Sheets (if configured)
+        sheets_client = get_sheets()
+        if sheets_client:
+            try:
+                row_count = log_order_to_sheets(sheets_client, parsed, split)
+                confirm_lines.append(f"📊 {row_count} rows logged to analytics sheet.")
+            except Exception as e:
+                logger.error(f"Sheets logging failed: {e}")
+                confirm_lines.append(f"⚠️ Sheets logging failed — Splitwise entry is fine.")
 
         await update.message.reply_text(
             "\n".join(confirm_lines),
