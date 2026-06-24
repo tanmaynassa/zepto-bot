@@ -76,7 +76,9 @@ def main():
     # ── Top Metrics ──
     col1, col2, col3, col4 = st.columns(4)
 
-    total_spend = filtered["Amount (₹)"].sum()
+    # Deduplicate shared items (they have 2 rows — one per person)
+    deduped = filtered.drop_duplicates(subset=["Order ID", "Item"])
+    total_spend = deduped["Amount (₹)"].sum()
     total_orders = filtered["Order ID"].nunique()
     avg_order = total_spend / total_orders if total_orders > 0 else 0
 
@@ -159,9 +161,9 @@ def main():
     st.subheader("🔝 Most Bought Items")
 
     top_items = (
-        filtered.groupby("Item")
-        .agg({"Amount (₹)": "sum", "Item": "count"})
-        .rename(columns={"Item": "Times Bought", "Amount (₹)": "Total Spent (₹)"})
+        deduped.groupby("Item")
+        .agg({"Amount (₹)": "sum", "Order ID": "nunique"})
+        .rename(columns={"Order ID": "Times Bought", "Amount (₹)": "Total Spent (₹)"})
         .sort_values("Total Spent (₹)", ascending=False)
         .head(15)
         .reset_index()
