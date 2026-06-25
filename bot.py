@@ -186,53 +186,57 @@ async def handle_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     if text != "ok":
-        await update.message.reply_text("Type `ok` to log to Splitwise or `cancel` to discard.", parse_mode="Markdown")
+        await update.message.reply_text("Type `ok` to confirm or `cancel` to discard.", parse_mode="Markdown")
         return CONFIRMING
 
-    # Create Splitwise expense
-    await update.message.reply_text("⏳ Logging to Splitwise...")
+    confirm_lines = []
+    needs_splitwise = split["kalash_share"] > 0 or split.get("abhirag_share", 0) > 0
 
-    try:
-        sw_client = get_splitwise()
-        description = f"Zepto — {parsed.get('order_date', 'order')}"
-        details = build_expense_details(split)
+    # Only create Splitwise expense if someone owes money
+    if needs_splitwise:
+        await update.message.reply_text("⏳ Logging to Splitwise...")
 
-        result = sw_client.create_expense(
-            description=description,
-            total_cost=split["order_total"],
-            my_share=split["my_share"],
-            kalash_share=split["kalash_share"],
-            abhirag_share=split.get("abhirag_share", 0),
-            details=details,
-        )
+        try:
+            sw_client = get_splitwise()
+            description = f"Zepto — {parsed.get('order_date', 'order')}"
+            details = build_expense_details(split)
 
-        confirm_lines = [f"✅ *Done!* Logged to Splitwise.\n"]
-        if split["kalash_share"] > 0:
-            confirm_lines.append(f"Kalash owes you *₹{split['kalash_share']:.2f}*")
-        if split.get("abhirag_share", 0) > 0:
-            confirm_lines.append(f"Abhirag owes you *₹{split['abhirag_share']:.2f}*")
-        confirm_lines.append(f"\nThey'll get a notification from Splitwise.")
+            result = sw_client.create_expense(
+                description=description,
+                total_cost=split["order_total"],
+                my_share=split["my_share"],
+                kalash_share=split["kalash_share"],
+                abhirag_share=split.get("abhirag_share", 0),
+                details=details,
+            )
 
-        # Log to Google Sheets (if configured)
-        sheets_client = get_sheets()
-        if sheets_client:
-            try:
-                row_count = log_order_to_sheets(sheets_client, parsed, split)
-                confirm_lines.append(f"📊 {row_count} rows logged to analytics sheet.")
-            except Exception as e:
-                logger.error(f"Sheets logging failed: {e}")
-                confirm_lines.append(f"⚠️ Sheets logging failed — Splitwise entry is fine.")
+            confirm_lines.append(f"✅ *Done!* Logged to Splitwise.\n")
+            if split["kalash_share"] > 0:
+                confirm_lines.append(f"Kalash owes you *₹{split['kalash_share']:.2f}*")
+            if split.get("abhirag_share", 0) > 0:
+                confirm_lines.append(f"Abhirag owes you *₹{split['abhirag_share']:.2f}*")
 
-        await update.message.reply_text(
-            "\n".join(confirm_lines),
-            parse_mode="Markdown",
-        )
+        except Exception as e:
+            logger.error(f"Splitwise error: {e}")
+            confirm_lines.append(f"❌ Splitwise error: {e}")
+    else:
+        confirm_lines.append(f"✅ *All yours — ₹{split['order_total']:.2f}*")
+        confirm_lines.append(f"No split needed, skipped Splitwise.")
 
-    except Exception as e:
-        logger.error(f"Splitwise error: {e}")
-        await update.message.reply_text(
-            f"❌ Splitwise error: {e}\n\nCheck your API key and try again."
-        )
+    # Log to Google Sheets (if configured) — always, even for personal orders
+    sheets_client = get_sheets()
+    if sheets_client:
+        try:
+            row_count = log_order_to_sheets(sheets_client, parsed, split)
+            confirm_lines.append(f"\n📊 {row_count} rows logged to analytics sheet.")
+        except Exception as e:
+            logger.error(f"Sheets logging failed: {e}")
+            confirm_lines.append(f"⚠️ Sheets logging failed — check logs.")
+
+    await update.message.reply_text(
+        "\n".join(confirm_lines),
+        parse_mode="Markdown",
+    )
 
     context.user_data.clear()
     return ConversationHandler.END

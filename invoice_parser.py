@@ -189,6 +189,6 @@ def format_split_summary(split: dict, order_date: str) -> str:
         lines.append(f"📌 *Kalash owes you:* ₹{split['kalash_share']:.2f}")
     if split["abhirag_share"] > 0:
         lines.append(f"📌 *Abhirag owes you:* ₹{split['abhirag_share']:.2f}")
-    lines.append(f"\nType `ok` to log to Splitwise or `cancel` to discard.")
+    lines.append(f"\nType `ok` to confirm or `cancel` to discard.")
 
     return "\n".join(lines)
