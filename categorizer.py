@@ -8,7 +8,7 @@ Unmatched items go to 'Other' (can be fixed manually in the sheet).
 # Checked in order, first match wins
 CATEGORY_RULES = [
     # Packaged / Junk Food (check early — brand names like Maggi, Kurkure)
-    (["maggi", "chips", "kurkure", "biscuit", "cookie", "namkeen",
+    (["maggi", "chips", "kurkure", "karare", "too yumm", "biscuit", "cookie", "namkeen",
       "bhujia", "mixture", "wafer", "nachos", "popcorn", "instant",
       "cup noodle", "top ramen", "yippee", "knorr", "ready to eat",
       "frozen", "pizza", "burger", "fries", "nugget", "momos",
@@ -47,6 +47,26 @@ CATEGORY_RULES = [
       "cockroach", "pest", "rat", "matchbox", "candle",
       "bulb", "battery", "tape", "glue"], "Household"),
 
+    # Staples (grains, oil, spices, condiments — check before Fruits/Vegetables)
+    (["rice", "atta", "flour", "maida", "suji", "rava", "semolina",
+      "dal", "lentil", "chana", "rajma", "moong", "masoor", "toor",
+      "urad", "poha", "oats", "muesli", "cornflakes", "cereal",
+      "bread", "pav", "roti", "naan", "wheat", "besan", "gram flour",
+      "quinoa", "barley", "millets", "ragi", "jowar", "bajra",
+      "vermicelli", "sevai", "pasta", "noodle", "spaghetti", "macaroni",
+      "salt", "sugar", "pepper", "turmeric", "haldi", "chilli powder",
+      "mirch", "cumin", "jeera", "coriander powder", "garam masala",
+      "biryani masala", "kitchen king", "sambhar", "rasam", "pickle",
+      "achar", "sauce", "ketchup", "mayonnaise", "vinegar",
+      "soy sauce", "mustard", "honey", "jam", "jaggery", "gur",
+      "mishri", "ajwain", "hing", "asafoetida", "cardamom", "elaichi",
+      "clove", "laung", "cinnamon", "dalchini", "bay leaf", "tej patta",
+      "star anise", "fennel", "saunf", "poppy seed", "til", "sesame",
+      "masala", "paste",
+      "oil", "refined", "mustard oil", "sunflower", "groundnut oil",
+      "olive oil", "coconut oil", "sesame oil", "rice bran",
+      "cooking oil", "vanaspati"], "Staples"),
+
     # Fruits
     (["banana", "apple", "mango", "orange", "grapes", "grape", "papaya",
       "pomegranate", "watermelon", "melon", "kiwi", "pineapple", "guava",
@@ -78,37 +98,12 @@ CATEGORY_RULES = [
       "protein powder", "whey", "protein bar", "tofu", "soya chunks",
       "nutrela"], "Protein"),
 
-    # Staples & Grains
-    (["rice", "atta", "flour", "maida", "suji", "rava", "semolina",
-      "dal", "lentil", "chana", "rajma", "moong", "masoor", "toor",
-      "urad", "poha", "oats", "muesli", "cornflakes", "cereal",
-      "bread", "pav", "roti", "naan", "wheat", "besan", "gram flour",
-      "quinoa", "barley", "millets", "ragi", "jowar", "bajra",
-      "vermicelli", "sevai", "pasta", "noodle", "spaghetti",
-      "macaroni"], "Staples"),
-
-    # Spices & Condiments
-    (["salt", "sugar", "pepper", "turmeric", "haldi", "chilli powder",
-      "mirch", "cumin", "jeera", "coriander powder", "garam masala",
-      "biryani masala", "kitchen king", "sambhar", "rasam", "pickle",
-      "achar", "sauce", "ketchup", "mayonnaise", "vinegar",
-      "soy sauce", "mustard", "honey", "jam", "jaggery", "gur",
-      "mishri", "ajwain", "hing", "asafoetida", "cardamom", "elaichi",
-      "clove", "laung", "cinnamon", "dalchini", "bay leaf", "tej patta",
-      "star anise", "fennel", "saunf", "poppy seed", "til", "sesame",
-      "masala"], "Spices & Condiments"),
-
-    # Cooking Oils
-    (["oil", "refined", "mustard oil", "sunflower", "groundnut oil",
-      "olive oil", "coconut oil", "sesame oil", "rice bran",
-      "cooking oil", "vanaspati"], "Cooking Oil"),
-
-    # Dry Fruits & Nuts
+    # Healthy Snacks (dry fruits & nuts)
     (["almond", "badam", "cashew", "kaju", "walnut", "akhrot",
       "pistachio", "pista", "raisin", "kishmish", "dates", "khajoor",
       "fig", "anjeer", "dried", "trail mix", "mixed nuts",
       "peanut", "mungfali", "seeds", "chia", "flax", "sunflower seed",
-      "pumpkin seed"], "Dry Fruits & Nuts"),
+      "pumpkin seed"], "Healthy Snacks"),
 ]
 
 
