@@ -111,8 +111,8 @@ async def handle_tags(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     valid_srs = {item["sr"] for item in parsed["items"]}
 
-    # Handle "all shared" shortcut
-    if text == "all shared":
+    # Handle "all shared" shortcuts
+    if text in ("all shared", "all", "shared", "split all", "all split"):
         mine_indices = []
         kalash_indices = []
         abhirag_indices = []
@@ -259,8 +259,14 @@ def main():
             MessageHandler(filters.Document.PDF, handle_pdf),
         ],
         states={
-            AWAITING_TAGS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_tags)],
-            CONFIRMING: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_confirm)],
+            AWAITING_TAGS: [
+                MessageHandler(filters.Document.PDF, handle_pdf),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_tags),
+            ],
+            CONFIRMING: [
+                MessageHandler(filters.Document.PDF, handle_pdf),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_confirm),
+            ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
